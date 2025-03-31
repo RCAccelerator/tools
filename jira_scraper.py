@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-import uuid
 from argparse import ArgumentParser
 import json
 import multiprocessing as mp
@@ -10,13 +9,12 @@ import requests
 import pandas as pd
 from tqdm import tqdm
 
-from langchain.text_splitter import (
-    RecursiveCharacterTextSplitter,
-)
-from transformers import AutoTokenizer
-from openai import OpenAI
-from qdrant_client import QdrantClient, models
+from qdrant_client import QdrantClient
 
+from llama_index.core import StorageContext, Document, VectorStoreIndex, Settings
+from llama_index.vector_stores.qdrant import QdrantVectorStore
+from llama_index.embeddings.openai import OpenAIEmbedding
+from llama_index.core.node_parser import SentenceSplitter
 
 COLLECTION_NAME = "all-jira-tickets"
 TOKENIZER_MODEL = "BAAI/bge-large-en-v1.5"
@@ -134,47 +132,34 @@ def update_database(
 
     print(df.info())
 
-    llm = OpenAI(
-        base_url=llm_server_url,
-        organization="",
-        api_key=llm_api_key,
-    )
-
     # Back up data
     df.to_pickle(jira_database_bkp_path)
 
-    ## Upload data
+    # Set up client
     client = QdrantClient(database_client_url, api_key=database_api_key)
 
-    tokenizer = AutoTokenizer.from_pretrained(embedding_model)
+    # Settings for llama-index
+    Settings.text_splitter = SentenceSplitter(chunk_size=chunk_size, chunk_overlap=20)
 
-    splitter = RecursiveCharacterTextSplitter.from_huggingface_tokenizer(
-        tokenizer, chunk_size=chunk_size, chunk_overlap=0
+    Settings.embed_model = OpenAIEmbedding(
+        model=embedding_model,
+        api_key=llm_api_key,
+        api_base=llm_server_url)
+
+    # Create vector store tied to collection and storage context
+    vector_store = QdrantVectorStore(client=client, collection_name=COLLECTION_NAME)
+
+    storage_context = StorageContext.from_defaults(vector_store=vector_store)
+
+    # Create base documents with their metadata
+    documents = [
+        Document(text=row["text"], metadata={"url": row["url"]}) for _, row in df.iterrows()]
+
+    # Build index
+    VectorStoreIndex.from_documents(
+        documents,
+        storage_context=storage_context,
     )
-
-    client.recreate_collection(
-        collection_name=COLLECTION_NAME,
-        vectors_config=models.VectorParams(size=1024, distance=models.Distance.COSINE),
-    )
-
-    for _, row in tqdm(df.iterrows()):
-        chunks = splitter.split_text(row["text"])
-        for _, chunk in enumerate(chunks):
-            embedding = (
-                llm.embeddings.create(model=embedding_model, input=chunk)
-                .data[0]
-                .embedding
-            )
-            client.upsert(
-                collection_name=COLLECTION_NAME,
-                points=[
-                    models.PointStruct(
-                        id=str(uuid.uuid4()),
-                        payload={"url": row["url"], "text": row["text"]},
-                        vector=embedding,
-                    ),
-                ],
-            )
 
     print(
         f"Number of records: {client.get_collection(collection_name=COLLECTION_NAME).points_count}"
