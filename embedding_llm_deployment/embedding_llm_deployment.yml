@@ -1,0 +1,187 @@
+---
+# embedding_llm_deployment.yml - Ansible Playbook for deploying an Embedding LLM server
+# This playbook automates the process of setting up vLLM with BAAI/bge-large-en-v1.5 on RHEL 9.5
+
+- name: Deploy Embedding LLM Server
+  hosts: embedding_servers
+  become: true
+  vars:
+    user_name: "{{ ansible_user }}"
+    user_home: "/home/{{ user_name }}"
+    venv_path: "{{ user_home }}/vllm-env"
+    model_name: "BAAI/bge-large-en-v1.5"
+    model_path: "{{ user_home }}/models/bge-large-en-v1.5"
+    server_port: 8000
+    scripts_dir: "{{ user_home }}/embedding_scripts"
+    gpu_enabled: true  # Set to false if deploying on CPU-only machines
+
+  tasks:
+    # 1. System Updates and Dependencies
+    - name: Update system packages
+      dnf:
+        name: "*"
+        state: latest
+        update_cache: yes
+
+    - name: Install development tools and required packages
+      dnf:
+        name:
+          - "Development Tools"
+          - python3.9
+          - python3.9-devel
+          - python3-pip
+          - git
+          - wget
+          - curl
+          - vim
+          - htop
+        state: present
+
+    # 2. GPU Setup (if enabled)
+
+
+    # 3. Python Virtual Environment
+    - name: Create Python virtual environment
+      become: false
+      pip:
+        name: virtualenv
+        extra_args: --user
+
+    - name: Setup virtual environment
+      become: false
+      command: python3.9 -m venv {{ venv_path }}
+      args:
+        creates: "{{ venv_path }}"
+
+    - name: Install Python dependencies in virtual environment
+      become: false
+      pip:
+        name:
+          - vllm
+          - torch
+          - transformers
+          - huggingface_hub
+          - psutil
+          - numpy
+          - requests
+        virtualenv: "{{ venv_path }}"
+        virtualenv_command: python3.9 -m venv
+
+    # 4. Directory Setup
+    - name: Create directories for scripts and models
+      become: false
+      file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0755'
+      with_items:
+        - "{{ scripts_dir }}"
+        - "{{ user_home }}/models"
+        - "{{ user_home }}/logs"
+
+    # 5. Copy Python Scripts (created separately)
+    - name: Copy Python scripts to server
+      become: false
+      copy:
+        src: "{{ item.src }}"
+        dest: "{{ scripts_dir }}/{{ item.dest }}"
+        mode: '0755'
+      with_items:
+        - { src: 'deploy_embedding_server.py', dest: 'deploy_embedding_server.py' }
+        # - { src: 'test_embedding.py', dest: 'test_embedding.py' }
+        # - { src: 'monitor_embedding_server.py', dest: 'monitor_embedding_server.py' }
+        # - { src: 'acceptance_test.py', dest: 'acceptance_test.py' }
+      tags:
+        - scripts
+
+    # 6. Download Model
+    - name: Create download model script
+      become: false
+      copy:
+        dest: "{{ scripts_dir }}/download_model.py"
+        mode: '0755'
+        content: |
+          #!/usr/bin/env python3
+          from huggingface_hub import snapshot_download
+          
+          def main():
+              print("Downloading model {{ model_name }}...")
+              snapshot_download(repo_id="{{ model_name }}", local_dir="{{ model_path }}")
+              print("Download complete!")
+              
+          if __name__ == "__main__":
+              main()
+
+    - name: Download model from Hugging Face
+      become: false
+      command: "{{ venv_path }}/bin/python {{ scripts_dir }}/download_model.py"
+      args:
+        creates: "{{ model_path }}/config.json"
+      register: model_download
+      ignore_errors: true
+
+    - name: Show download output
+      debug:
+        var: model_download.stdout_lines
+      when: model_download.stdout_lines is defined
+
+    # 7. Create Systemd Service
+    - name: Create systemd service file
+      template:
+        src: templates/embedding-server.service.j2
+        dest: /etc/systemd/system/embedding-server.service
+        mode: '0644'
+      vars:
+        service_description: "vLLM Embedding Server"
+        service_user: "{{ user_name }}"
+        working_directory: "{{ user_home }}"
+        environment_path: "{{ venv_path }}/bin"
+        exec_start: "{{ venv_path }}/bin/python {{ scripts_dir }}/deploy_embedding_server.py --model {{ model_path }} --port {{ server_port }}"
+
+    # Alternative if template file isn't available
+    - name: Create systemd service file (inline)
+      copy:
+        dest: /etc/systemd/system/embedding-server.service
+        content: |
+          [Unit]
+          Description=vLLM Embedding Server
+          After=network.target
+          
+          [Service]
+          User={{ user_name }}
+          WorkingDirectory={{ user_home }}
+          Environment="PATH={{ venv_path }}/bin:$PATH"
+          ExecStart={{ venv_path }}/bin/python {{ scripts_dir }}/deploy_embedding_server.py --model {{ model_path }} --port {{ server_port }}
+          Restart=on-failure
+          RestartSec=5s
+          
+          [Install]
+          WantedBy=multi-user.target
+        mode: '0644'
+      when: false  # Disabled by default, enable if template approach fails
+
+    # 8. Configure Firewall
+    - name: Allow traffic on embedding server port
+      firewalld:
+        port: "{{ server_port }}/tcp"
+        permanent: true
+        state: enabled
+      notify: Reload firewall
+
+    # 9. Start Service
+    - name: Reload systemd to recognize new service
+      systemd:
+        daemon_reload: yes
+
+    - name: Enable embedding server service
+      systemd:
+        name: embedding-server
+        enabled: yes
+        state: started
+
+    # 10. Create Monitoring Service
+    # 11. Run Acceptance Tests
+    # 12. Create Integration Example
+  handlers:
+    - name: Reload firewall
+      command: firewall-cmd --reload
