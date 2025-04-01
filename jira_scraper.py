@@ -14,6 +14,7 @@ from qdrant_client import QdrantClient
 from llama_index.core import StorageContext, Document, VectorStoreIndex, Settings
 from llama_index.vector_stores.qdrant import QdrantVectorStore
 from llama_index.embeddings.openai import OpenAIEmbedding
+from llama_index.embeddings.huggingface import HuggingFaceEmbedding
 from llama_index.core.node_parser import SentenceSplitter
 
 COLLECTION_NAME = "all-jira-tickets"
@@ -71,6 +72,17 @@ def update_database(
     jira_projects: list = DEFAULT_JIRA_PROJECTS,
 ):
 
+    if llm_server_url:
+        Settings.embed_model = OpenAIEmbedding(
+            model=embedding_model,
+            api_key=llm_api_key,
+            api_base=llm_server_url)
+    else:
+        print("Running local embeddig model in absence of endpoint.")
+        Settings.embed_model = HuggingFaceEmbedding(embedding_model)
+
+    print(Settings.embed_model.get_text_embedding("Test input"))
+
     headers = {
         "Content-Type": "application/json",
         "Accept": "application/json",
@@ -99,6 +111,7 @@ def update_database(
         raise ValueError
 
     total = data["total"]
+    total = 1000
     print(f"{total} items found for query {query}")
 
     # Retrieve results going further back
@@ -141,11 +154,6 @@ def update_database(
     # Settings for llama-index
     Settings.text_splitter = SentenceSplitter(chunk_size=chunk_size, chunk_overlap=20)
 
-    Settings.embed_model = OpenAIEmbedding(
-        model=embedding_model,
-        api_key=llm_api_key,
-        api_base=llm_server_url)
-
     # Create vector store tied to collection and storage context
     vector_store = QdrantVectorStore(client=client, collection_name=COLLECTION_NAME)
 
@@ -159,6 +167,7 @@ def update_database(
     VectorStoreIndex.from_documents(
         documents,
         storage_context=storage_context,
+        show_progress=True,
     )
 
     print(
