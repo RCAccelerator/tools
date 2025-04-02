@@ -1,0 +1,9 @@
+uuid
+argparse
+requests
+pandas
+tqdm
+langchain
+transformers
+openai
+qdrant_client
