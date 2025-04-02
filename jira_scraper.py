@@ -81,7 +81,11 @@ def update_database(
         print("Running local embeddig model in absence of endpoint.")
         Settings.embed_model = HuggingFaceEmbedding(embedding_model)
 
-    print(Settings.embed_model.get_text_embedding("Test input"))
+    try:
+        Settings.embed_model.get_text_embedding("Test input")
+    except Exception as e:
+        print(f"Exception {e} occured when calling model {embedding_model}")
+        exit(1)
 
     headers = {
         "Content-Type": "application/json",
