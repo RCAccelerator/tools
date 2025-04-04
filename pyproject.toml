@@ -22,3 +22,13 @@ dev = [
     "flake8==7.0.0",
     "ruff==0.9.0",
 ]
+
+[tool.setuptools]
+py-modules = []
+
+[project.scripts]
+jira_scraper = "jira_scraper.main:command"
+
+[tool.setuptools.packages.find]
+include = ["jira_scraper*"]
+namespaces = false
