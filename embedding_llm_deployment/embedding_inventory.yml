@@ -1,0 +1,9 @@
+embedding_servers:
+  hosts:
+    embedding1:
+      ansible_host: YOUR_SERVER_IP
+      ansible_user: YOUR_USERNAME
+      # ansible_ssh_private_key_file: /path/to/private_key
+      # ansible_become_password: your_sudo_password
+  vars:
+    ansible_python_interpreter: /usr/bin/python3
