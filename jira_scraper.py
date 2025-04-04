@@ -27,15 +27,10 @@ TOKENIZER_MODEL = "BAAI/bge-large-en-v1.5"
 DEFAULT_EMBEDDING_MODEL_ID = "BAAI/bge-large-en-v1.5"
 
 DEFAULT_JIRA_PROJECTS = [
-    "OSP",
-    "RHOSINFRA",
     "OSPCIX",
-    "RHOSBUGS",
-    "OSPK8",
-    "RHOSPRIO",
     "OSPRH",
+    "OSASINFRA",
 ]
-
 
 def get_jira_data(
         jira_url: str, headers: dict, query: str, max_results: int, start_at: int):
@@ -60,6 +55,58 @@ def get_jira_data(
         return []
 
     return data["issues"]
+
+def assemble_jira_query(jira_projects: list = DEFAULT_JIRA_PROJECTS) -> str:
+    projects = " OR ".join([f"project={e}" for e in jira_projects])
+
+    # Define the terms to search for in descriptions and comments
+    search_terms = [
+        "root cause",
+        "RCA",
+        "failure description",
+        "impacted component",
+        "resolved"
+    ]
+
+    # Create the description and comment search part
+    desc_comment_search = " OR ".join([
+        f'description ~ "{term}"' for term in search_terms
+    ] + [
+        f'comment ~ "{term}"' for term in search_terms
+    ])
+
+    pr_search = " OR ".join([
+        'description ~ "github.com"',
+        'description ~ "review.opendev.org"',
+        'description ~ "gitlab.*com"', # for GitLab domains
+        'comment ~ "github.com"',
+        'comment ~ "review.opendev.org"',
+        'comment ~ "gitlab.*com"',
+        'description ~ "pull request"',
+        'comment ~ "pull request"',
+        'comment ~ "merged"'
+    ])
+
+    # Assemble the full query
+    query = f"{projects} AND ({desc_comment_search})"
+    query += f" AND ({pr_search})"
+
+    # URL encode the query for API use
+    query = requests.utils.quote(query)
+
+    return query
+
+def dbg_print(df: pd.DataFrame) -> None:
+    if __debug__:
+        pd.set_option('display.max_rows', None)
+        pd.set_option('display.max_columns', None)
+        pd.set_option('display.width', None)
+        pd.set_option('display.max_colwidth', None)
+        for index, row in df.iterrows():
+            print(f"Row {index}:")
+            for column, value in row.items():
+                print(f"  {column}: {value}")
+            print("-" * 50)
 
 
 def insert_row(data: str, record_id: str, record_key: str, jira_url: str, field: str, dataset: pd.DataFrame):
@@ -105,9 +152,8 @@ def update_database(
     }
     results = []
 
-    projects = " OR ".join([f"project={e}" for e in jira_projects])
-    query = f"{projects} AND type=bug AND status=Closed"
-    query = requests.utils.quote(query)
+    query = assemble_jira_query(jira_projects)
+
     # Get initial batch of data
     try:
         response = requests.get(
@@ -172,6 +218,13 @@ def update_database(
     df = df.dropna()
 
     print(df.info())
+    dbg_print(df)
+
+    llm = OpenAI(
+        base_url=llm_server_url,
+        organization="",
+        api_key=llm_api_key,
+    )
 
     # Back up data
     df.to_pickle(jira_database_bkp_path)
