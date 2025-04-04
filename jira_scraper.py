@@ -166,7 +166,7 @@ def update_database(
     df = pd.DataFrame(dataset)
 
     # Remove duplicates
-    df = df.drop_duplicates(subset=["id", "kind"])
+    df = df.drop_duplicates(subset=["text"])
 
     # Remove rows with missing values
     df = df.dropna()
