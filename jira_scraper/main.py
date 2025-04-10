@@ -33,6 +33,8 @@ def command():
                         default=constants.DEFAULT_JIRA_PROJECTS)
     parser.add_argument("--db_collection_name", type=str,
                         default=constants.COLLECTION_NAME)
+    parser.add_argument("--scraper-processes", type=int,
+                        default=constants.DEFAULT_NUM_SCRAPER_PROCESSES)
     parser.add_argument("--jira_year_offset", type=int,
                         default=constants.JIRA_YEAR_OFFSET,
                         help=(
@@ -55,7 +57,8 @@ def command():
         "embedding_model": args.embedding_model,
         "jira_projects": args.jira_projects,
         "db_collection_name": args.db_collection_name,
-        "jira_year_offset": args.jira_year_offset
+        "jira_year_offset": args.jira_year_offset,
+        "scraper_processes": args.scraper_processes,
     }
 
     scraper = JiraScraper(config_args)

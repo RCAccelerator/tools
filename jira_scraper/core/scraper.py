@@ -99,7 +99,7 @@ class JiraScraper:
         LOG.info("%d items found for query %s", total, query)
 
         # Fetch remaining issues in parallel
-        with mp.Pool(10) as pool:
+        with mp.Pool(self.config["scraper_processes"]) as pool:
             results = pool.starmap(
                 self.jira_client.get_issues,
                 [(query, max_results, page) for page in range(
