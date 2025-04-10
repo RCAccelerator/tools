@@ -1,9 +1,13 @@
 """Main module for jira scraper."""
+import logging
 
 from argparse import ArgumentParser
 from jira_scraper.common import constants
 from jira_scraper.core.scraper import JiraScraper
 
+logging.basicConfig(
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+)
 
 def command():
     """Entry point for command line execution."""

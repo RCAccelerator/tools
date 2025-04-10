@@ -1,6 +1,7 @@
 
 """Jira Scraper"""
 import uuid
+import logging
 import multiprocessing as mp
 from datetime import datetime, timedelta
 from typing import List, Dict, TypedDict
@@ -13,6 +14,9 @@ from jira_scraper.processors.jira_provider import JiraProvider
 from jira_scraper.processors.vector_store import QdrantVectorStoreManager
 from jira_scraper.processors.text_processor import TextProcessor
 
+
+LOG = logging.getLogger(__name__)
+LOG.setLevel(logging.INFO)
 
 class JiraRecord(TypedDict, total=False):
     """Represents a record extracted from a Jira ticket.
@@ -92,7 +96,7 @@ class JiraScraper:
         if not initial_issues:
             return []
 
-        print(f"{total} items found for query {query}")
+        LOG.info("%d items found for query %s", total, query)
 
         # Fetch remaining issues in parallel
         with mp.Pool(10) as pool:
@@ -202,14 +206,17 @@ class JiraScraper:
             backup_path: str = "jira_all_bugs.pickle") -> list[JiraRecord]:
         """Cleanup Jira Records"""
         df = pd.DataFrame(jira_records)
-        print("Jira records stats BEFORE cleanup:")
-        print(df.info())
+
+        LOG.info("Jira records stats BEFORE cleanup:")
+        LOG.info(df.info())
+
         df = df.dropna()
         df = df.drop_duplicates(subset=["text"])
-        print("Jira records stats AFTER cleanup:")
-        print(df.info())
 
-        print(f"Saving backup to: {backup_path}")
+        LOG.info("Jira records stats AFTER cleanup:")
+        LOG.info(df.info())
+
+        LOG.info("Saving backup to: %s", backup_path)
         df.to_pickle(backup_path)
 
         return [JiraRecord(**row) for row in df.to_dict(orient='records')]
@@ -219,7 +226,7 @@ class JiraScraper:
         query = self.build_query(self.config["jira_projects"], self.config["jira_year_offset"])
         issues = self.fetch_all_issues(query, self.config["max_results"])
         if not issues:
-            print("No issues found to process.")
+            LOG.error("No issues found to process.")
             return
 
         jira_records = self.get_jira_records(issues)
@@ -231,4 +238,4 @@ class JiraScraper:
         # Print final stats
         stats = self.db_manager.get_collection_stats(
             self.config["db_collection_name"])
-        print(f"Number of records: {stats.points_count}")
+        LOG.info("Number of records: %s", stats.points_count)

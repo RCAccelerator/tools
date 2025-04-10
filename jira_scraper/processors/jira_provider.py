@@ -1,11 +1,15 @@
 
 """Client to fetch jira issues."""
+import logging
 import abc
 import json
 from typing import List, Dict
 
 import requests
 
+
+LOG = logging.getLogger(__name__)
+LOG.setLevel(logging.INFO)
 
 # pylint: disable=too-few-public-methods
 class IssueProvider(abc.ABC):
@@ -29,9 +33,19 @@ class JiraProvider(IssueProvider):
             "Authorization": f"Bearer {query_token}",
         }
 
-    def _get_issues(self, query: str,
-                    max_results: int,
-                    start_at: int = 0) -> str:
+    def get_issues(self, query: str,
+                   max_results: int,
+                   start_at: int = 0) -> tuple[list[dict], int]:
+        """Get issues from Jira.
+
+        Gets issues from Jira and returns list of all the issues and number
+        of retrieved issues.
+
+        Args:
+            query: Query for Jira (e.g., project="ABC")
+            max_results: Maximum number of tickets that should be retrieved
+            start_at: Specififes which chunk of tickets you want to download.
+        """
         full_url = (
             f"{self.query_url}/rest/api/2/search?"
             f"jql={query}&maxResults={max_results}&"
@@ -53,10 +67,10 @@ class JiraProvider(IssueProvider):
             data = self._get_issues(query, max_results)
             return (data["issues"], data['total'])
         except requests.exceptions.Timeout:
-            print(f"Request to jira query {query} timed out.")
+            LOG.error("Request to jira query %s timed out.", query)
             return ([], 0)
         except requests.exceptions.RequestException as e:
-            print(f"Error fetching JIRA data: {e}")
+            LOG.error("Error fetching JIRA data: %s", e)
             return ([], 0)
 
     def get_issues(self, query: str,
@@ -68,8 +82,8 @@ class JiraProvider(IssueProvider):
                                     start_at)
             return data["issues"]
         except requests.exceptions.Timeout:
-            print(f"Request to jira query {query} timed out.")
+            LOG.error("Request to jira query %s timed out.", query)
             return []
         except requests.exceptions.RequestException as e:
-            print(f"Error fetching JIRA data: {e}")
+            LOG.error("Error fetching JIRA data: %s", e)
             return []
