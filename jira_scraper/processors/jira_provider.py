@@ -3,9 +3,8 @@
 import logging
 import abc
 import json
-from typing import List, Dict
 
-import requests
+import urllib3 as http
 
 
 LOG = logging.getLogger(__name__)
@@ -18,7 +17,7 @@ class IssueProvider(abc.ABC):
     @abc.abstractmethod
     def get_issues(self, query: str,
                    max_results: int,
-                   start_at: int = 0) -> List[Dict]:
+                   start_at: int = 0) -> tuple[list[dict], int]:
         """Retrieve issues from the provider."""
 
 
@@ -52,38 +51,35 @@ class JiraProvider(IssueProvider):
             f"fields=*all&startAt={start_at}"
         )
 
-        response = requests.get(
-            full_url,
-            headers=self.headers,
-            timeout=(3.05, 180),
-        )
-        response.raise_for_status()
-        return json.loads(response.text)
+        LOG.info("Processing Jira request [query: %s, max_results: %d, "
+                 "start_at: %d]", query, max_results, start_at)
 
-    def get_initial_issues(self, query: str,
-                           max_results: int) -> tuple[List[Dict], int]:
-        """Retrieve intial issues and total count."""
         try:
-            data = self._get_issues(query, max_results)
-            return (data["issues"], data['total'])
-        except requests.exceptions.Timeout:
+            response = http.request(
+                method="GET",
+                url=full_url,
+                headers=self.headers,
+                timeout=http.Timeout(connect=3.05, read=180),
+                retries=http.Retry(
+                    total=10,
+                    connect=10,
+                    backoff_factor=0.1,
+                    status_forcelist=[429,443]
+                ),
+            )
+        except http.exceptions.TimeoutError:
             LOG.error("Request to jira query %s timed out.", query)
             return ([], 0)
-        except requests.exceptions.RequestException as e:
+        except http.exceptions.RequestError as e:
             LOG.error("Error fetching JIRA data: %s", e)
             return ([], 0)
 
-    def get_issues(self, query: str,
-                   max_results: int,
-                   start_at: int = 0) -> List[Dict]:
-        """Retrieve issues from JIRA with pagination."""
-        try:
-            data = self._get_issues(query, max_results,
-                                    start_at)
-            return data["issues"]
-        except requests.exceptions.Timeout:
-            LOG.error("Request to jira query %s timed out.", query)
-            return []
-        except requests.exceptions.RequestException as e:
-            LOG.error("Error fetching JIRA data: %s", e)
-            return []
+        parsed_response = json.loads(response.data.decode("utf-8"))
+
+        LOG.info("Found %d Jira tickets matching the query and retrieved %d " \
+                 "of them. [query: %s, max_results: %d, start_at: %d]",
+                 parsed_response["total"],
+                 len(parsed_response["issues"]),
+                 query, max_results, start_at)
+
+        return parsed_response["issues"], parsed_response["total"]

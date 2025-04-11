@@ -5,7 +5,7 @@
 groups = ["default", "dev"]
 strategy = ["inherit_metadata"]
 lock_version = "4.5.0"
-content_hash = "sha256:148c488dd305d9079aaf3139e603797f43698c1f671e91848eb383b27abed18a"
+content_hash = "sha256:692c075993a4e6eb270d64c62672f437fdab37e8701321d0ae01adfa73aa684f"
 
 [[metadata.targets]]
 requires_python = "==3.12.*"
@@ -1211,7 +1211,7 @@ files = [
 [[package]]
 name = "six"
 version = "1.17.0"
-requires_python = "!=3.0.*,!=3.1.*,!=3.2.*,>=2.7"
+requires_python = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*"
 summary = "Python 2 and 3 compatibility utilities"
 groups = ["default"]
 files = [
