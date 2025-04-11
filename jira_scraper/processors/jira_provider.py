@@ -1,11 +1,14 @@
 
 """Client to fetch jira issues."""
+import logging
 import abc
 import json
-from typing import List, Dict
 
-import requests
+import urllib3 as http
 
+
+LOG = logging.getLogger(__name__)
+LOG.setLevel(logging.INFO)
 
 # pylint: disable=too-few-public-methods
 class IssueProvider(abc.ABC):
@@ -14,7 +17,7 @@ class IssueProvider(abc.ABC):
     @abc.abstractmethod
     def get_issues(self, query: str,
                    max_results: int,
-                   start_at: int = 0) -> List[Dict]:
+                   start_at: int = 0) -> tuple[list[dict], int]:
         """Retrieve issues from the provider."""
 
 
@@ -29,47 +32,42 @@ class JiraProvider(IssueProvider):
             "Authorization": f"Bearer {query_token}",
         }
 
-    def _get_issues(self, query: str,
-                    max_results: int,
-                    start_at: int = 0) -> str:
+    def get_issues(self, query: str,
+                   max_results: int,
+                   start_at: int = 0) -> tuple[list[dict], int]:
+        """Get issues from Jira.
+
+        Gets issues from Jira and returns list of all the issues and number
+        of retrieved issues.
+
+        Args:
+            query: Query for Jira (e.g., project="ABC")
+            max_results: Maximum number of tickets that should be retrieved
+            start_at: Specififes which chunk of tickets you want to download.
+        """
         full_url = (
             f"{self.query_url}/rest/api/2/search?"
             f"jql={query}&maxResults={max_results}&"
             f"fields=*all&startAt={start_at}"
         )
 
-        response = requests.get(
-            full_url,
-            headers=self.headers,
-            timeout=(3.05, 180),
-        )
-        response.raise_for_status()
-        return json.loads(response.text)
+        LOG.info("Processing Jira request with query: %s, max_results: %d, "
+                 "start_at: %d", query, max_results, start_at)
 
-    def get_initial_issues(self, query: str,
-                           max_results: int) -> tuple[List[Dict], int]:
-        """Retrieve intial issues and total count."""
         try:
-            data = self._get_issues(query, max_results)
-            return (data["issues"], data['total'])
-        except requests.exceptions.Timeout:
-            print(f"Request to jira query {query} timed out.")
+            response = http.request(
+                method="GET",
+                url=full_url,
+                headers=self.headers,
+                timeout=http.Timeout(connect=3.05, read=180),
+                retries=http.Retry(10, backoff_factor=0.1),
+            )
+        except http.exceptions.TimeoutError:
+            LOG.error("Request to jira query %s timed out.", query)
             return ([], 0)
-        except requests.exceptions.RequestException as e:
-            print(f"Error fetching JIRA data: {e}")
+        except http.exceptions.RequestError as e:
+            LOG.error("Error fetching JIRA data: %s", e)
             return ([], 0)
 
-    def get_issues(self, query: str,
-                   max_results: int,
-                   start_at: int = 0) -> List[Dict]:
-        """Retrieve issues from JIRA with pagination."""
-        try:
-            data = self._get_issues(query, max_results,
-                                    start_at)
-            return data["issues"]
-        except requests.exceptions.Timeout:
-            print(f"Request to jira query {query} timed out.")
-            return []
-        except requests.exceptions.RequestException as e:
-            print(f"Error fetching JIRA data: {e}")
-            return []
+        parsed_response = json.loads(response.data.decode("utf-8"))
+        return parsed_response["issues"], parsed_response["total"]

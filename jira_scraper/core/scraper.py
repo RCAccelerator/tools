@@ -1,6 +1,7 @@
 
 """Jira Scraper"""
 import uuid
+import logging
 import multiprocessing as mp
 from datetime import datetime, timedelta
 from typing import List, Dict, TypedDict
@@ -13,6 +14,9 @@ from jira_scraper.processors.jira_provider import JiraProvider
 from jira_scraper.processors.vector_store import QdrantVectorStoreManager
 from jira_scraper.processors.text_processor import TextProcessor
 
+
+LOG = logging.getLogger(__name__)
+LOG.setLevel(logging.INFO)
 
 class JiraRecord(TypedDict, total=False):
     """Represents a record extracted from a Jira ticket.
@@ -86,25 +90,26 @@ class JiraScraper:
     def fetch_all_issues(self, query: str, max_results: int) -> List[Dict]:
         """Fetch all issues matching the query."""
         # Get initial batch to determine total count
-        initial_issues, total = self.jira_client.get_initial_issues(
-            query, max_results)
+        initial_issues, total = self.jira_client.get_issues(
+            query, max_results
+        )
 
         if not initial_issues:
+            LOG.error("No jira tickets found!")
             return []
 
-        print(f"{total} items found for query {query}")
+        LOG.info("%d items found for query %s", total, query)
 
-        # Fetch remaining issues in parallel
-        with mp.Pool(10) as pool:
-            results = pool.starmap(
-                self.jira_client.get_issues,
-                [(query, max_results, page) for page in range(
-                    1000, total, 1000)]
-            )
+        # Fetch remaining issues in parallel using a process pool executor
+        with mp.Pool(self.config["scraper_processes"]) as pool:
+            args = [(query, max_results, page)
+                    for page in range(1000, total, 1000)]
+
+            results = pool.starmap(self.jira_client.get_issues, args)
 
         # Combine all issues
         all_issues = initial_issues + [
-            issue for batch in results for issue in batch]
+            issue for batch in results for issue in batch[0]]
         return all_issues
 
     def get_jira_records(self, issues: List[Dict]) -> list[JiraRecord]:
@@ -204,14 +209,14 @@ class JiraScraper:
             backup_path: str = "jira_all_bugs.pickle") -> list[JiraRecord]:
         """Cleanup Jira Records"""
         df = pd.DataFrame(jira_records)
-        print("Jira records stats BEFORE cleanup:")
-        print(df.info())
+        LOG.info("Jira records stats BEFORE cleanup:")
+        LOG.info(df.info())
         df = df.dropna()
         df = df.drop_duplicates(subset=["text"])
-        print("Jira records stats AFTER cleanup:")
-        print(df.info())
+        LOG.info("Jira records stats AFTER cleanup:")
+        LOG.info(df.info())
 
-        print(f"Saving backup to: {backup_path}")
+        LOG.info("Saving backup to: %s", backup_path)
         df.to_pickle(backup_path)
 
         return [JiraRecord(**row) for row in df.to_dict(orient='records')]
@@ -221,7 +226,7 @@ class JiraScraper:
         query = self.build_query(self.config["jira_projects"])
         issues = self.fetch_all_issues(query, self.config["max_results"])
         if not issues:
-            print("No issues found to process.")
+            LOG.error("No issues found to process.")
             return
 
         jira_records = self.get_jira_records(issues)
@@ -233,4 +238,4 @@ class JiraScraper:
         # Print final stats
         stats = self.db_manager.get_collection_stats(
             self.config["db_collection_name"])
-        print(f"Number of records: {stats.points_count}")
+        LOG.info("Number of records: %s", stats.points_count)
