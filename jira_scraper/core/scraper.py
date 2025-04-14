@@ -66,7 +66,7 @@ class JiraScraper:
             api_key=config["llm_api_key"],
         )
 
-    def build_query(self, projects: List[str]) -> str:
+    def build_query(self, projects: List[str], jira_year_offset: int = 0) -> str:
         """Build JQL query from project dictionary.
 
         Args:
@@ -76,12 +76,15 @@ class JiraScraper:
             JQL query string with appropriate filters
         """
         projects_str = " OR ".join([f"project={e}" for e in projects])
+        query = f"({projects_str}) AND resolution not in (\"Not a Bug\", \"Won\'t Do\")"
 
-        # 2 years ago from now
-        two_years_ago = datetime.now() - timedelta(days=365*2)
-        date_filter = f'created >= "{two_years_ago.strftime("%Y-%m-%d")}"'
+        # N years ago from now
+        if jira_year_offset:
+            two_years_ago = datetime.now() - timedelta(days=365 * jira_year_offset)
+            date_filter = f'created >= "{two_years_ago.strftime("%Y-%m-%d")}"'
+            query = f"{query} AND {date_filter}"
 
-        return f"({projects_str}) AND {date_filter}"
+        return query
 
     def fetch_all_issues(self, query: str, max_results: int) -> List[Dict]:
         """Fetch all issues matching the query."""
@@ -218,7 +221,7 @@ class JiraScraper:
 
     def run(self):
         """Main execution method."""
-        query = self.build_query(self.config["jira_projects"])
+        query = self.build_query(self.config["jira_projects"], self.config["jira_year_offset"])
         issues = self.fetch_all_issues(query, self.config["max_results"])
         if not issues:
             print("No issues found to process.")

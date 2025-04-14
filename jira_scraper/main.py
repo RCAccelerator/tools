@@ -29,7 +29,14 @@ def command():
                         default=constants.DEFAULT_JIRA_PROJECTS)
     parser.add_argument("--db_collection_name", type=str,
                         default=constants.COLLECTION_NAME)
-
+    parser.add_argument("--jira_year_offset", type=int,
+                        default=constants.JIRA_YEAR_OFFSET,
+                        help=(
+                            "How old in years should be the oldest JIRA item pulled "
+                            "relative to the current date. Value of 0 will include "
+                            "all items regardless of date."
+                            )
+    )
     args = parser.parse_args()
 
     config_args = {
@@ -44,6 +51,7 @@ def command():
         "embedding_model": args.embedding_model,
         "jira_projects": args.jira_projects,
         "db_collection_name": args.db_collection_name,
+        "jira_year_offset": args.jira_year_offset
     }
 
     scraper = JiraScraper(config_args)
