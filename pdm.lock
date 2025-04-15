@@ -5,7 +5,7 @@
 groups = ["default", "dev"]
 strategy = ["inherit_metadata"]
 lock_version = "4.5.0"
-content_hash = "sha256:692c075993a4e6eb270d64c62672f437fdab37e8701321d0ae01adfa73aa684f"
+content_hash = "sha256:14fd97de027438deeb140f0f39838c34cab1207c546d6c85ea6a19e2c2d28c45"
 
 [[metadata.targets]]
 requires_python = "==3.12.*"
@@ -53,6 +53,34 @@ dependencies = [
 files = [
     {file = "astroid-3.0.3-py3-none-any.whl", hash = "sha256:92fcf218b89f449cdf9f7b39a269f8d5d617b27be68434912e11e79203963a17"},
     {file = "astroid-3.0.3.tar.gz", hash = "sha256:4148645659b08b70d72460ed1921158027a9e53ae8b7234149b1400eddacbb93"},
+]
+
+[[package]]
+name = "beautifulsoup4"
+version = "4.13.4"
+requires_python = ">=3.7.0"
+summary = "Screen-scraping library"
+groups = ["default"]
+dependencies = [
+    "soupsieve>1.2",
+    "typing-extensions>=4.0.0",
+]
+files = [
+    {file = "beautifulsoup4-4.13.4-py3-none-any.whl", hash = "sha256:9bbbb14bfde9d79f38b8cd5f8c7c85f4b8f2523190ebed90e950a8dea4cb1c4b"},
+    {file = "beautifulsoup4-4.13.4.tar.gz", hash = "sha256:dbb3c4e1ceae6aefebdaf2423247260cd062430a410e38c66f2baa50a8437195"},
+]
+
+[[package]]
+name = "bs4"
+version = "0.0.2"
+summary = "Dummy package for Beautiful Soup (beautifulsoup4)"
+groups = ["default"]
+dependencies = [
+    "beautifulsoup4",
+]
+files = [
+    {file = "bs4-0.0.2-py2.py3-none-any.whl", hash = "sha256:abf8742c0805ef7f662dce4b51cca104cffe52b835238afc169142ab9b3fbccc"},
+    {file = "bs4-0.0.2.tar.gz", hash = "sha256:a48685c58f50fe127722417bae83fe6badf500d54b55f7e39ffe43b798653925"},
 ]
 
 [[package]]
@@ -1228,6 +1256,17 @@ groups = ["default", "dev"]
 files = [
     {file = "sniffio-1.3.1-py3-none-any.whl", hash = "sha256:2f6da418d1f1e0fddd844478f41680e794e6051915791a034ff65e5f100525a2"},
     {file = "sniffio-1.3.1.tar.gz", hash = "sha256:f4324edc670a0f49750a81b895f35c3adb843cca46f0530f79fc1babb23789dc"},
+]
+
+[[package]]
+name = "soupsieve"
+version = "2.6"
+requires_python = ">=3.8"
+summary = "A modern CSS selector implementation for Beautiful Soup."
+groups = ["default"]
+files = [
+    {file = "soupsieve-2.6-py3-none-any.whl", hash = "sha256:e72c4ff06e4fb6e4b5a9f0f55fe6e81514581fca1515028625d0f299c602ccc9"},
+    {file = "soupsieve-2.6.tar.gz", hash = "sha256:e2e68417777af359ec65daac1057404a3c8a5455bb8abc36f1a9866ab1a51abb"},
 ]
 
 [[package]]
