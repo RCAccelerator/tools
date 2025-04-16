@@ -87,7 +87,7 @@ class JiraScraper:
             JQL query string with appropriate filters
         """
         projects_str = " OR ".join([f"project={e}" for e in projects])
-        query = f"({projects_str}) AND resolution not in (\"Not a Bug\", \"Won\'t Do\")"
+        query = f"({projects_str})"
 
         # Apply date cutoff
         date_filter = f'created >= "{date_cutoff.strftime("%Y-%m-%d")}"'
