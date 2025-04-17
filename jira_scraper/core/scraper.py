@@ -14,6 +14,11 @@ from jira_scraper.processors.jira_provider import JiraProvider
 from jira_scraper.processors.vector_store import QdrantVectorStoreManager
 from jira_scraper.processors.text_processor import TextProcessor
 
+from qdrant_client.http.models import (
+    AliasOperations,
+    CreateAliasOperation,
+    DeleteAliasOperation
+)
 
 LOG = logging.getLogger(__name__)
 LOG.setLevel(logging.INFO)
@@ -185,21 +190,21 @@ class JiraScraper:
         return len(response.data[0].embedding)
 
     def store_jira_records(self, jira_records: list[JiraRecord]) -> None:
-        """Process text and store embeddings in database."""
+        """Process text and store embeddings into a new collection.
+        Once created update atomically."""
+        alias_name = self.config["db_collection_name"]
+        new_collection = f"{alias_name}new"
         vector_size = self.get_embedding_dimension()
 
-        self.db_manager.recreate_collection(
-            self.config["db_collection_name"],
-            vector_size
-        )
+        self.db_manager.recreate_collection(new_collection, vector_size)
 
         for jira_record in tqdm(jira_records, desc="Processing embeddings"):
-
             chunks: list[str] = []
             for jira_field in ["summary", "description", "comments"]:
                 chunks += self.text_processor.split_text(jira_record[jira_field])
 
             embeddings: list[list[float]] = []
+
             for chunk in chunks:
                 embeddings.append(self.llm_client.embeddings.create(
                     model=self.config["embedding_model"],
@@ -219,10 +224,33 @@ class JiraScraper:
                 vector=embeddings,
             )
 
-            self.db_manager.upsert_data(
-                self.config["db_collection_name"],
-                [point]
-            )
+            self.db_manager.upsert_data(new_collection, [point])
+
+        self._update_collection_alias(alias_name, new_collection)
+
+    def _update_collection_alias(self, alias_name: str, new_collection: str) -> None:
+        """Update the alias to point to the new collection and clean up the old one."""
+        qdrant = self.db_manager.client
+        existing_aliases = qdrant.get_aliases().aliases
+        previous_collection = None
+
+        for alias in existing_aliases:
+            if alias.alias_name == alias_name:
+                previous_collection = alias.collection_name
+                break
+
+        ops = []
+        if previous_collection:
+            ops.append(DeleteAliasOperation(alias_name=alias_name))
+        ops.append(CreateAliasOperation(collection_name=new_collection, alias_name=alias_name))
+
+        qdrant.update_aliases(change_aliases=AliasOperations(operations=ops))
+
+        # finally delete old collection
+        if previous_collection and previous_collection != new_collection:
+            qdrant.delete_collection(collection_name=previous_collection)
+
+        LOG.info("Alias '%s' now points to '%s'", alias_name, new_collection)
 
     def cleanup_jira_records(
             self, jira_records: list[JiraRecord],
