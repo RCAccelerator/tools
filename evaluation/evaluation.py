@@ -12,11 +12,14 @@ async def call_chatbot_api(client: httpx.AsyncClient,
                            url: str,
                            prompt: str,
                            similarity_threshold: float,
+                           temperature: float,
                            timeout: int):
     payload = {
         "content": prompt,
         "similarity_threshold": similarity_threshold,
+        "temperature": temperature,
     }
+
     try:
         response = await client.post(url,
                                      json=payload,
@@ -74,6 +77,7 @@ async def process_row(client: httpx.AsyncClient,
                                  args.chatbot_api_url,
                                  row['user_prompt'],
                                  args.similarity_threshold,
+                                 temperature=args.temperatur,
                                  timeout=args.chatbot_api_timeout)
 
     result = {
@@ -188,6 +192,14 @@ async def main_async():
         default=5,
         required=False,
         help="Maximum number of concurrent API calls"
+    )
+
+    parser.add_argument(
+        "--temperatur" ,
+        type=float,
+        default=0,
+        required=False,
+        help="temperature value to be used by the model"
     )
 
     # Parse the arguments
