@@ -31,8 +31,8 @@ class VectorStoreManager(abc.ABC):
 class QdrantVectorStoreManager(VectorStoreManager):
     """Manages interactions with Qdrant database."""
 
-    def __init__(self, client_url: str, api_key: str):
-        self.client = QdrantClient(client_url, api_key=api_key)
+    def __init__(self, client_url: str, api_key: str, timeout=100):
+        self.client = QdrantClient(client_url, api_key=api_key, timeout=timeout)
 
     def recreate_collection(self, collection_name: str, vector_size: int):
         """Recreate the collection with specified parameters."""

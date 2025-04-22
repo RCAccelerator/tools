@@ -1,6 +1,7 @@
 """Module for config constants."""
 
-COLLECTION_NAME = "rca-knowledge-base"
+JIRA_COLLECTION_NAME = "rca-knowledge-base"
+OSP_DOCS_COLLECTION_NAME = "rca-osp-docs-knowledge-base"
 DEFAULT_EMBEDDING_MODEL = "BAAI/bge-m3"
 DEFAULT_JIRA_URL = "https://issues.redhat.com"
 DEFAULT_JIRA_PROJECTS = {

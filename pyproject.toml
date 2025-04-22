@@ -32,9 +32,10 @@ dev = [
 py-modules = []
 
 [project.scripts]
-data_scraper = "data_scraper.main:command"
+data_scraper = "data_scraper.main:data_scraper"
 feedback_exporter = "feedback_exporter.export_feedback:main"
 evaluation = "evaluation.evaluation:main"
+osp_doc_scraper = "data_scraper.main:osp_doc_scraper"
 
 [tool.setuptools.packages.find]
 include = ["data_scraper*", "feedback_exporter*"]

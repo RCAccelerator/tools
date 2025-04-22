@@ -7,7 +7,8 @@ this repository contains:
 - `data_scraper`: a tool that scrapes jira issues and more to store the collected data
 in a vector database.
 - `feedback_exporter`: a tool to fetch user feedback from Chainlit DB and write it in to a Google Spreadsheet.
-
+- `openstack_retriever`: a tool to pull upstream openstack documentation (requires Python 3.11)
+- `osp_doc_scraper`: a tool for turning upstream OSP documentation into vector database. Requires documents retrieved by `openstack_retriever`.
 
 ## Getting Started
 

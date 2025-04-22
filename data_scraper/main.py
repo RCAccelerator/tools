@@ -4,13 +4,13 @@ from datetime import datetime
 
 from argparse import ArgumentParser
 from data_scraper.common import constants
-from data_scraper.core.scraper import JiraScraper
+from data_scraper.core.scraper import JiraScraper, OSPDocScraper
 
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 
-def command():
+def data_scraper():
     """Entry point for command line execution."""
     parser = ArgumentParser("data_scraper")
 
@@ -33,7 +33,7 @@ def command():
     parser.add_argument("--jira_projects", nargs='+', type=str,
                         default=constants.DEFAULT_JIRA_PROJECTS)
     parser.add_argument("--db_collection_name", type=str,
-                        default=constants.COLLECTION_NAME)
+                        default=constants.JIRA_COLLECTION_NAME)
     parser.add_argument("--scraper-processes", type=int,
                         default=constants.DEFAULT_NUM_SCRAPER_PROCESSES)
     parser.add_argument("--date_cutoff", type=datetime.fromisoformat,
@@ -68,5 +68,43 @@ def command():
     scraper.run()
 
 
-if __name__ == "__main__":
-    command()
+def osp_doc_scraper():
+    """Entry point for command line execution."""
+    parser = ArgumentParser("osp_doc_scraper")
+
+    # Required arguments
+    parser.add_argument("--database_client_url", type=str, required=True)
+    parser.add_argument("--llm_server_url", type=str, required=True)
+    parser.add_argument("--llm_api_key", type=str, required=True)
+    parser.add_argument("--database_api_key", type=str, required=True)
+    parser.add_argument(
+        "--docs_location",
+        type=str,
+        help="Path to plaintext OSP docs generated with get_opentsack_plaintext_docs.sh",
+        required=True,
+        )
+
+    # Optional arguments
+    parser.add_argument("--chunk_size", type=int,
+                        default=constants.DEFAULT_CHUNK_SIZE)
+    parser.add_argument("--embedding_model", type=str,
+                        default=constants.DEFAULT_EMBEDDING_MODEL)
+    parser.add_argument("--db_collection_name", type=str,
+                        default=constants.OSP_DOCS_COLLECTION_NAME)
+    parser.add_argument("--osp_version", type=str, default="18.0")
+    args = parser.parse_args()
+
+    config_args = {
+        "database_client_url": args.database_client_url,
+        "llm_server_url": args.llm_server_url,
+        "llm_api_key": args.llm_api_key,
+        "database_api_key": args.database_api_key,
+        "chunk_size": args.chunk_size,
+        "embedding_model": args.embedding_model,
+        "db_collection_name": args.db_collection_name,
+        "docs_location": args.docs_location,
+        "osp_version": args.osp_version
+    }
+
+    scraper = OSPDocScraper(config_args)
+    scraper.run()

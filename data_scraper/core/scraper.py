@@ -5,6 +5,7 @@ import logging
 import multiprocessing as mp
 from typing import List, Dict, TypedDict, Any
 from datetime import datetime
+import os
 
 import pandas as pd
 from tqdm import tqdm
@@ -118,13 +119,11 @@ class Scraper:
                 )
 
             self.record_postprocessing(record)
-
             point = self.db_manager.build_record(
                 record_id=str(uuid.uuid4()),
                 payload=dict(record),
                 vector=embeddings,
             )
-
             self.db_manager.upsert_data(self.config["db_collection_name"], [point])
 
     def cleanup_records(
@@ -293,6 +292,92 @@ class JiraScraper(Scraper):
         df = df.drop_duplicates(subset=["text"])
 
         LOG.info("Jira records stats AFTER cleanup:")
+        LOG.info(df.info())
+
+        LOG.info("Saving backup to: %s", backup_path)
+        df.to_pickle(backup_path)
+
+        return [JiraRecord(**row) for row in df.to_dict(orient="records")]
+
+
+class OSPDocScraper(Scraper):
+    """Main class for JIRA scraping and processing."""
+
+    def __init__(self, config: Dict):
+        super().__init__(config=config)
+        self.base_url = "https://docs.openstack.org"
+        self.osp_version = config["osp_version"]
+        self.docs_path = os.path.abspath(config['docs_location'])
+        if self.docs_path.endswith("/"):
+            self.docs_path = self.docs_path[:-1]
+
+    def get_url(self, file_path: str):
+        """Derive URL from file path."""
+        return (
+            self.base_url
+            + file_path.removeprefix(self.docs_path).removesuffix("txt")
+            + "html"
+        )
+
+
+    def get_records(self, documents: List[Dict]) -> list[Dict]:
+        """Convert Jira API responses to JiraRecords"""
+        document_records: list[dict] = []
+
+        for document in tqdm(documents, desc="Processing documents"):
+
+            document_records.append(
+                {
+                    "kind": "osp-documentation-chunk",
+                    "components": [document["project"]],
+                    "url": document["url"],
+                    "text": document["text"],
+                    "osp_version": document["osp_version"],
+                }
+            )
+
+        return document_records
+
+    def record_postprocessing(self, record):
+        pass
+
+    def get_documents(self) -> List[dict]:
+
+        documents = []
+        LOG.info("Reading documents from %s", self.docs_path)
+        for root, _, files in os.walk(self.docs_path):
+            for file in files:
+                if file.endswith(".txt"):
+                    doc_path = os.path.join(root, file)
+                    with open(doc_path, mode='r', encoding='utf-8') as document:
+                        documents.append({
+                            "text": document.read(),
+                            "project" : doc_path.removeprefix(self.docs_path).split("/")[1],
+                            "path": doc_path,
+                            "osp_version": self.config["osp_version"],
+                            "url": self.get_url(doc_path),
+                        }
+                    )
+
+        return documents
+
+    def get_chunks(self, record: dict) -> list[str]:
+
+        return self.text_processor.split_text(record["text"])
+
+    def cleanup_records(
+        self, records: list[dict], backup_path: str = "osp_all_docs.pickle"
+    ) -> list[dict]:
+        """Cleanup document records"""
+        df = pd.DataFrame(records)
+
+        LOG.info("Document records stats BEFORE cleanup:")
+        LOG.info(df.info())
+
+        df = df.dropna()
+        df = df.drop_duplicates(subset=["text"])
+
+        LOG.info("Document records stats AFTER cleanup:")
         LOG.info(df.info())
 
         LOG.info("Saving backup to: %s", backup_path)

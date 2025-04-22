@@ -18,6 +18,13 @@ pdm-lock-check: ## Check that the pdm.lock file is in a good shape
 tox: ## Run tox
 	tox
 
+install-openstack-docs-deps: ## Install dependencies for pulling openstack docs
+	python3.11 -m venv .openstackvenv && source .openstackvenv/bin/activate
+	pip install tox
+
+pull-openstack-docs: ## Pull and convert Openstack docs
+	./openstack_retriever/get_openstack_plaintext_docs.sh
+
 help: ## Show this help screen
 	@echo 'Usage: make <OPTIONS> ... <TARGETS>'
 	@echo ''
