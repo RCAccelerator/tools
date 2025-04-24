@@ -6,6 +6,7 @@ from argparse import ArgumentParser
 from data_scraper.common import constants
 from data_scraper.core.scraper import JiraScraper, OSPDocScraper
 from data_scraper.core.errata_scraper import ErrataScraper
+from data_scraper.core.zuul_scraper import ZuulScraper
 
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
@@ -174,3 +175,62 @@ def errata_scraper() -> None:
 
     scraper = ErrataScraper(config_args)
     scraper.run()
+
+def zuul_scraper() -> None:
+    """Entry point for command line execution."""
+    parser = ArgumentParser("zuul_scraper")
+
+    # Required arguments
+    # parser.add_argument("--database_client_url", type=str, required=True)
+    # parser.add_argument("--llm_server_url", type=str, required=True)
+    # parser.add_argument("--llm_api_key", type=str, required=True)
+    # parser.add_argument("--database_api_key", type=str, required=True)
+
+    parser.add_argument("--database_client_url", type=str, 
+                        default="http://localhost:6333",
+                        help="URL for the database client")
+    parser.add_argument("--llm_server_url", type=str, 
+                        default="http://10.37.137.4:8000/v1",
+                        help="URL for the LLM server")
+    parser.add_argument("--llm_api_key", type=str, 
+                        default="redhat",
+                        help="API key for LLM server")
+    parser.add_argument("--database_api_key", type=str, 
+                        default="your-database-key",
+                        help="API key for database access")
+
+    # Optional arguments
+    parser.add_argument("--chunk_size", type=int,
+                    default=constants.DEFAULT_CHUNK_SIZE)
+    parser.add_argument("--embedding_model", type=str,
+                    default=constants.DEFAULT_EMBEDDING_MODEL)
+    parser.add_argument("--db_collection_name", type=str,
+                    default=constants.ZULL_COLLECTION_NAME)
+    parser.add_argument("--zuul-url", type=str,
+                    default=constants.DEFAULT_ZULL_URL)
+    parser.add_argument("--scraper-processes", type=int,
+                    default=constants.DEFAULT_NUM_SCRAPER_PROCESSES)
+    parser.add_argument("--verify-ssl", type=bool, default=False,
+                    help="Whether to verify SSL certificates")
+    args = parser.parse_args()
+
+    config_args = {
+        "database_client_url": args.database_client_url,
+        "llm_server_url": args.llm_server_url,
+        "llm_api_key": args.llm_api_key,
+        "database_api_key": args.database_api_key,
+        "chunk_size": args.chunk_size,
+        "embedding_model": args.embedding_model,
+        "db_collection_name": args.db_collection_name,
+        "zuul_url": args.zuul_url,
+        "scraper_processes": args.scraper_processes,
+        "verify_ssl": args.verify_ssl,
+    }
+
+    scraper = ZuulScraper(config_args)
+    scraper.run()
+
+
+if __name__ == "__main__":
+    # This code should import and call your zuul_scraper function
+    zuul_scraper()

@@ -38,6 +38,8 @@ errata_scraper = "data_scraper.main:errata_scraper"
 feedback_exporter = "feedback_exporter.export_feedback:main"
 evaluation = "evaluation.evaluation:main"
 osp_doc_scraper = "data_scraper.main:osp_doc_scraper"
+zuul_scraper = "data_scraper.main:zuul_scraper"
+
 
 [tool.setuptools.packages.find]
 include = ["data_scraper*", "feedback_exporter*"]
