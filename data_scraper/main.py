@@ -1,10 +1,10 @@
-"""Main module for jira scraper."""
+"""Main module for data scraper."""
 import logging
 from datetime import datetime
 
 from argparse import ArgumentParser
-from jira_scraper.common import constants
-from jira_scraper.core.scraper import JiraScraper
+from data_scraper.common import constants
+from data_scraper.core.scraper import JiraScraper
 
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
@@ -12,7 +12,7 @@ logging.basicConfig(
 
 def command():
     """Entry point for command line execution."""
-    parser = ArgumentParser("jira_scraper")
+    parser = ArgumentParser("data_scraper")
 
     # Required arguments
     parser.add_argument("--jira_token", type=str, required=True)

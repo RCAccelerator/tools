@@ -32,10 +32,10 @@ dev = [
 py-modules = []
 
 [project.scripts]
-jira_scraper = "jira_scraper.main:command"
+data_scraper = "data_scraper.main:command"
 feedback_exporter = "feedback_exporter.export_feedback:main"
 evaluation = "evaluation.evaluation:main"
 
 [tool.setuptools.packages.find]
-include = ["jira_scraper*", "feedback_exporter*"]
+include = ["data_scraper*", "feedback_exporter*"]
 namespaces = false

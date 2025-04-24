@@ -4,7 +4,7 @@ This repository contains useful tools that can be useful when deploying the
 [RCAccelerator/chatbot](https://github.com/RCAccelerator/chatbot). As of now,
 this repository contains:
 
-- `jira_scraper`: a tool that scrapes jira issues and stores the collected data
+- `data_scraper`: a tool that scrapes jira issues and more to store the collected data
 in a vector database.
 - `feedback_exporter`: a tool to fetch user feedback from Chainlit DB and write it in to a Google Spreadsheet.
 
@@ -14,7 +14,7 @@ in a vector database.
 1. Run a tool:
    ```bash
    pip install .
-   jira_scraper --help
+   data_scraper --help
    ```
 
 ## Feedback Exporter Tool
