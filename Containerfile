@@ -4,6 +4,8 @@ USER root
 RUN groupadd -g 65532 tools && \
     useradd -u 65532 -g tools tools
 
+RUN dnf install -y krb5-workstation
+
 WORKDIR /app
 RUN chown -R tools:tools /app
 

@@ -5,12 +5,13 @@ from datetime import datetime
 from argparse import ArgumentParser
 from data_scraper.common import constants
 from data_scraper.core.scraper import JiraScraper, OSPDocScraper
+from data_scraper.core.errata_scraper import ErrataScraper
 
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 
-def data_scraper():
+def jira_scraper():
     """Entry point for command line execution."""
     parser = ArgumentParser("data_scraper")
 
@@ -110,4 +111,66 @@ def osp_doc_scraper():
     }
 
     scraper = OSPDocScraper(config_args)
+    scraper.run()
+
+def errata_scraper() -> None:
+    """Entry point for command line execution."""
+    parser = ArgumentParser("errata_scraper")
+
+    # Required arguments
+    parser.add_argument("--database_client_url", type=str, required=True)
+    parser.add_argument("--llm_server_url", type=str, required=True)
+    parser.add_argument("--llm_api_key", type=str, required=True)
+    parser.add_argument("--database_api_key", type=str, required=True)
+    parser.add_argument("--errata-url", type=str, required=True)
+    parser.add_argument("--kerberos-username", type=str, required=True)
+    parser.add_argument("--kerberos-password", type=str, required=True)
+
+    # Optional arguments
+    parser.add_argument("--jira_url", type=str,
+                        default=constants.DEFAULT_JIRA_URL)
+    parser.add_argument("--chunk_size", type=int,
+                        default=constants.DEFAULT_CHUNK_SIZE)
+    parser.add_argument("--embedding_model", type=str,
+                        default=constants.DEFAULT_EMBEDDING_MODEL)
+    parser.add_argument("--db_collection_name", type=str,
+                        default=constants.ERRATA_COLLECTION_NAME)
+    parser.add_argument("--errata-public-url", type=str,
+                        default=constants.DEFAULT_ERRATA_PUBLIC_URL)
+    parser.add_argument("--scraper-processes", type=int,
+                        default=constants.DEFAULT_NUM_SCRAPER_PROCESSES)
+    parser.add_argument("--errata-product-ids", nargs="*", type=int,
+                        default=[])
+    parser.add_argument("--date_cutoff", type=datetime.fromisoformat,
+                        default=datetime.fromisoformat(constants.DEFAULT_DATE_CUTOFF),
+                        help=(
+                            "No issues from before this date will be used. "
+                            "Date must follow ISO format 'YYYY-MM-DD'"
+                        )
+    )
+    parser.add_argument("--recreate_collection", type=bool, default=True,
+                        help="Recreate database collection from scratch.")
+    args = parser.parse_args()
+
+    config_args = {
+        "jira_url": args.jira_url,
+        "database_client_url": args.database_client_url,
+        "llm_server_url": args.llm_server_url,
+        "llm_api_key": args.llm_api_key,
+        "database_api_key": args.database_api_key,
+        "chunk_size": args.chunk_size,
+        "embedding_model": args.embedding_model,
+        "db_collection_name": args.db_collection_name,
+        "kerberos_username": args.kerberos_username,
+        "kerberos_password": args.kerberos_password,
+        "errata_product_ids": args.errata_product_ids,
+        "errata_url": args.errata_url,
+        "errata_public_url": args.errata_public_url,
+        "default_errata_public_url": args.errata_public_url,
+        "scraper_processes": args.scraper_processes,
+        "date_cutoff": args.date_cutoff,
+        "recreate_collection": args.recreate_collection,
+    }
+
+    scraper = ErrataScraper(config_args)
     scraper.run()

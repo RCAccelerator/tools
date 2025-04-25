@@ -17,6 +17,7 @@ dependencies = [
     "httpx>=0.28.1",
     "urllib3>=2.4.0",
     "bs4>=0.0.2",
+    "requests-kerberos>=0.15.0",
 ]
 requires-python = "==3.12.*"
 
@@ -32,7 +33,8 @@ dev = [
 py-modules = []
 
 [project.scripts]
-data_scraper = "data_scraper.main:data_scraper"
+jira_scraper = "data_scraper.main:jira_scraper"
+errata_scraper = "data_scraper.main:errata_scraper"
 feedback_exporter = "feedback_exporter.export_feedback:main"
 evaluation = "evaluation.evaluation:main"
 osp_doc_scraper = "data_scraper.main:osp_doc_scraper"
