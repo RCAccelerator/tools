@@ -92,6 +92,8 @@ def osp_doc_scraper():
     parser.add_argument("--db_collection_name", type=str,
                         default=constants.OSP_DOCS_COLLECTION_NAME)
     parser.add_argument("--osp_version", type=str, default="18.0")
+    parser.add_argument("--recreate_collection", type=bool, default=True,
+                        help="Recreate database collection from scratch.")
     args = parser.parse_args()
 
     config_args = {
@@ -103,7 +105,8 @@ def osp_doc_scraper():
         "embedding_model": args.embedding_model,
         "db_collection_name": args.db_collection_name,
         "docs_location": args.docs_location,
-        "osp_version": args.osp_version
+        "osp_version": args.osp_version,
+        "recreate_collection": args.recreate_collection,
     }
 
     scraper = OSPDocScraper(config_args)

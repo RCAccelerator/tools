@@ -100,9 +100,10 @@ class Scraper:
             self.db_manager.recreate_collection(
                 self.config["db_collection_name"], vector_size
             )
-        elif not self.db_manager.check_collection(self.config["collection_name"]):
+        elif not self.db_manager.check_collection(self.config["db_collection_name"]):
             LOG.error(
-                "Requested database collection %s does not exist.", self.config["collection_name"])
+                "Requested database collection %s does not exist.",
+                self.config["db_collection_name"])
             raise IOError
 
         for record in tqdm(records, desc="Processing embeddings"):
