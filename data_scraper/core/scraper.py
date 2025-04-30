@@ -307,13 +307,27 @@ class OSPDocScraper(Scraper):
     def __init__(self, config: Dict):
         super().__init__(config=config)
         self.base_url = "https://docs.openstack.org"
+        self.base_rhoso_url = (
+            "https://docs.redhat.com/en/documentation/"
+            "red_hat_openstack_services_on_openshift/{version}/html-single")
         self.osp_version = config["osp_version"]
         self.docs_path = os.path.abspath(config['docs_location'])
         if self.docs_path.endswith("/"):
             self.docs_path = self.docs_path[:-1]
+        self.rhoso_docs_path = config["rhoso_docs_path"]
+        if self.rhoso_docs_path:
+            self.rhoso_docs_path = os.path.abspath(self.rhoso_docs_path)
+            if self.rhoso_docs_path.endswith("/"):
+                self.rhoso_docs_path = self.rhoso_docs_path[:-1]
 
-    def get_url(self, file_path: str):
+
+    def get_url(self, file_path: str, rhoso_docs: bool = False):
         """Derive URL from file path."""
+        if rhoso_docs:
+            return (
+                self.base_rhoso_url.format(
+                    version=self.osp_version) + "/" + file_path.split('/')[-2]
+            )
         return (
             self.base_url
             + file_path.removeprefix(self.docs_path).removesuffix("txt")
@@ -359,7 +373,22 @@ class OSPDocScraper(Scraper):
                             "url": self.get_url(doc_path),
                         }
                     )
-
+        if self.rhoso_docs_path:
+            LOG.info("Reading documents from %s", self.rhoso_docs_path)
+            for root, _, files in os.walk(self.rhoso_docs_path):
+                for file in files:
+                    if file.endswith(".txt"):
+                        doc_path = os.path.join(root, file)
+                        with open(doc_path, mode='r', encoding='utf-8') as document:
+                            documents.append({
+                                "text": document.read(),
+                                "project" : doc_path.removeprefix(
+                                    self.rhoso_docs_path).split("/")[1],
+                                "path": doc_path,
+                                "osp_version": self.config["osp_version"],
+                                "url": self.get_url(doc_path, rhoso_docs=True),
+                            }
+                        )
         return documents
 
     def get_chunks(self, record: dict) -> list[str]:
