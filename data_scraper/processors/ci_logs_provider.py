@@ -36,8 +36,8 @@ CUTOFF_TIME = datetime.now() - timedelta(days=14)  # 2 weeks ago
 
 # Test path constants
 TEST_OPERATOR_PATH = "logs/controller-0/ci-framework-data/tests/test_operator"
-TEMPEST_TEST_PATTERN = "tempest-tests"
-TOBIKO_TEST_PATTERN = "tobiko-tests"
+TEMPEST_TEST_PATTERN = "tempest-"
+TOBIKO_TEST_PATTERN = "tobiko-"
 
 async def fetch_with_gssapi(url, params=None, timeout=30.0):
     """
