@@ -248,7 +248,7 @@ def ci_logs_scraper() -> None:
 
     # when json is ready, proceed with tracebacks and store them to QdrantDB
     scraper = CILogsScraper(config_args)
-    scraper.run()
+    scraper.run(("url", "test_name"))
 
 
 def solutions_scraper() -> None:

@@ -14,7 +14,7 @@ LOG.setLevel(logging.INFO)
 class CILogsRecord(TypedDict):
     """CILogs data point."""
     url: str
-    topic: str
+    test_name: str
     text: str
     components: list[str]
     kind: str
@@ -37,7 +37,7 @@ class CILogsScraper(Scraper):
         for document in documents:
             ci_logs_records.append({
                 "url": document["url"],
-                "topic": document["test_name"],
+                "test_name": document["test_name"],
                 "text": document["traceback"],
                 "components": [],
                 "kind": "zuul_jobs",

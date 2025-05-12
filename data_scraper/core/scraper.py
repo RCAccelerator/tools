@@ -92,7 +92,10 @@ class Scraper:
         after it has been created but before storing in vectorDB."""
         raise NotImplementedError
 
-    def store_records(self, records: list, recreate: bool = True) -> None:
+    def store_records(self,
+                      records: list,
+                      record_fields_for_key: tuple[str, ...],
+                      recreate: bool = True) -> None:
         """Process text and store embeddings in database."""
         vector_size = self.get_embedding_dimension()
 
@@ -107,9 +110,9 @@ class Scraper:
             raise IOError
 
         for record in tqdm(records, desc="Processing embeddings"):
-            if record['url']:
-                record_id = str(uuid.uuid5(uuid.NAMESPACE_URL, record["url"]))
-            else:
+            combined_key = "_".join([record[field] for field in record_fields_for_key])
+            record_id = str(uuid.uuid5(uuid.NAMESPACE_URL, combined_key))
+            if not record['url']:
                 LOG.error("Missing required URL field")
                 continue
 
@@ -148,7 +151,7 @@ class Scraper:
         """Convert raw data into list of dictionaries."""
         raise NotImplementedError
 
-    def run(self):
+    def run(self, record_fields_for_key=("url",)):
         """Main execution method."""
         documents = self.get_documents()
         if not documents:
@@ -159,7 +162,7 @@ class Scraper:
         records = self.cleanup_records(records)
 
         # Process and store embeddings
-        self.store_records(records, self.config["recreate_collection"])
+        self.store_records(records, record_fields_for_key, self.config["recreate_collection"])
 
         # Print final stats
         stats = self.db_manager.get_collection_stats(self.config["db_collection_name"])
