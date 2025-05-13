@@ -113,6 +113,17 @@ class Scraper:
             combined_key = "_".join([record[field] for field in record_fields_for_key])
             record_id = str(uuid.uuid5(uuid.NAMESPACE_URL, combined_key))
             if not record['url']:
+                # Check if all required fields for the key are present
+                missing_fields = [
+                    field for field in record_fields_for_key
+                    if field not in record or not record[field]
+                ]
+                if missing_fields:
+                    LOG.error("Missing required fields for key generation: %s", missing_fields)
+                    continue
+
+                combined_key = "_".join([record[field] for field in record_fields_for_key])
+                record_id = str(uuid.uuid5(uuid.NAMESPACE_URL, combined_key))
                 LOG.error("Missing required URL field")
                 continue
 
@@ -151,7 +162,7 @@ class Scraper:
         """Convert raw data into list of dictionaries."""
         raise NotImplementedError
 
-    def run(self, record_fields_for_key=("url",)):
+    def run(self, record_fields_for_key: tuple[str,...] = ("url",)):
         """Main execution method."""
         documents = self.get_documents()
         if not documents:
