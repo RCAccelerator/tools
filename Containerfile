@@ -12,6 +12,7 @@ RUN chown -R tools:tools /app
 COPY feedback_exporter feedback_exporter
 COPY data_scraper data_scraper
 COPY evaluation evaluation
+COPY chatbot_db chatbot_db
 COPY pdm.lock pyproject.toml Makefile .
 RUN make install-pdm install-global
 

@@ -20,6 +20,7 @@ dependencies = [
     "requests-kerberos>=0.15.0",
     "browser-cookie3>=0.19.1",
     "httpx-gssapi>=0.2.0",
+    "bcrypt>=4.3.0",
 ]
 requires-python = "==3.12.*"
 
@@ -42,6 +43,7 @@ feedback_exporter = "feedback_exporter.export_feedback:main"
 evaluation = "evaluation.evaluation:main"
 osp_doc_scraper = "data_scraper.main:osp_doc_scraper"
 solutions_scraper = "data_scraper.main:solutions_scraper"
+chatbot_db = "chatbot_db:main"
 
 [tool.setuptools.packages.find]
 include = ["data_scraper*", "feedback_exporter*"]
