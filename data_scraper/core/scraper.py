@@ -110,22 +110,16 @@ class Scraper:
             raise IOError
 
         for record in tqdm(records, desc="Processing embeddings"):
+            missing_fields = [
+                field for field in record_fields_for_key
+                if field not in record or not record[field]
+            ]
+            if missing_fields:
+                LOG.error("Missing required fields for key generation: %s", missing_fields)
+                continue
+
             combined_key = "_".join([record[field] for field in record_fields_for_key])
             record_id = str(uuid.uuid5(uuid.NAMESPACE_URL, combined_key))
-            if not record['url']:
-                # Check if all required fields for the key are present
-                missing_fields = [
-                    field for field in record_fields_for_key
-                    if field not in record or not record[field]
-                ]
-                if missing_fields:
-                    LOG.error("Missing required fields for key generation: %s", missing_fields)
-                    continue
-
-                combined_key = "_".join([record[field] for field in record_fields_for_key])
-                record_id = str(uuid.uuid5(uuid.NAMESPACE_URL, combined_key))
-                LOG.error("Missing required URL field")
-                continue
 
             chunks: list[str] = self.get_chunks(record)
 
