@@ -8,6 +8,7 @@ from data_scraper.core.scraper import JiraScraper, OSPDocScraper
 from data_scraper.core.errata_scraper import ErrataScraper
 from data_scraper.core.ci_logs_scraper import CILogsScraper
 from data_scraper.processors.ci_logs_provider  import TestOperatorReportsProvider
+from data_scraper.processors.logjuicer_provider  import LogjuicerDiffsProvider
 from data_scraper.core.solutions_scraper import SolutionsScraper
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
@@ -326,3 +327,92 @@ def solutions_scraper() -> None:
 
     scraper = SolutionsScraper(config_args)
     scraper.run()
+
+
+
+
+def logjuicer_scraper() -> None:
+    """Entry point for command line execution."""
+    parser = ArgumentParser("logjuicer_scraper")
+
+    # Required arguments
+    # parser.add_argument("--database_client_url", type=str, required=True)
+    # parser.add_argument("--llm_server_url", type=str, required=True)
+    # parser.add_argument("--llm_api_key", type=str, required=True)
+    # parser.add_argument("--database_api_key", type=str, required=True)
+    # parser.add_argument("--zuul_url", type=str, required=True)
+    
+    
+    parser.add_argument("--database_client_url", type=str, default="http://10.0.79.197:6333")
+    parser.add_argument("--llm_server_url", type=str, default="http://10.37.137.4:8000/v1")
+    parser.add_argument("--llm_api_key", type=str, default="redhat")
+    parser.add_argument("--database_api_key", type=str, default="H700sXJQTN1NSmfB7QqdTwKc")
+    parser.add_argument("--zuul_url", type=str, default="https://sf.apps.int.gpc.ocp-hub.prod.psi.redhat.com")
+
+    # Optional arguments
+    parser.add_argument("--chunk_size", type=int,
+                        default=constants.DEFAULT_CHUNK_SIZE)
+    parser.add_argument("--embedding_model", type=str,
+                        default=constants.DEFAULT_EMBEDDING_MODEL)
+    parser.add_argument("--db_collection_name", type=str,
+                        default=constants.CI_LOGS_COLLECTION_NAME)
+    parser.add_argument("--date_cutoff", type=datetime.fromisoformat,
+                        default=datetime.fromisoformat(constants.DEFAULT_DATE_CUTOFF),
+                        help=(
+                            "No issues from before this date will be used. "
+                            "Date must follow ISO format 'YYYY-MM-DD'"
+                        )
+    )
+    parser.add_argument("--recreate_collection", type=bool, default=True,
+                        help="Recreate database collection from scratch.")
+    parser.add_argument("--pipelines", nargs='+', type=str,
+                        default=constants.DEFAULT_ZULL_PIPELINES)
+    parser.add_argument("--tenants", nargs='+', type=str,
+                        default=constants.DEFAULT_ZULL_TENANTS)
+    parser.add_argument("--populate_db_from_json", type=bool, default=False,
+                        help="Used from Zuul jobs that create json file at the end of their runs.")
+    parser.add_argument("--backup", action='store_true', default=False,
+                        help="Save a scraper output to file")
+    parser.add_argument("--backup_path", type=str,
+                        default="aci_logs_all_data.pickle")
+    parser.add_argument("--auth_openidc", type=str, default="1afdf25b-13d5-486e-ae38-c112be98c4d6",
+                        help="The auth_openidc cookie for authentication")
+    args = parser.parse_args()
+
+    config_args = {
+        "database_client_url": args.database_client_url,
+        "llm_server_url": args.llm_server_url,
+        "llm_api_key": args.llm_api_key,
+        "database_api_key": args.database_api_key,
+        "chunk_size": args.chunk_size,
+        "embedding_model": args.embedding_model,
+        "db_collection_name": args.db_collection_name,
+        "zuul_url": args.zuul_url,
+        "date_cutoff": args.date_cutoff,
+        "recreate_collection": args.recreate_collection,
+        "pipelines": args.pipelines,
+        "tenants": args.tenants,
+        "output_json": "/tmp/output.json",
+        "backup": args.backup,
+        "backup_path": args.backup_path,
+        "auth_openidc": args.auth_openidc,
+    }
+
+
+
+    tenant = list(constants.DEFAULT_ZULL_TENANTS)[0] # just one tenenat is testsed ATM
+    pipelines = list(constants.DEFAULT_ZULL_PIPELINES) # Just RHOSO pipelines are tested ATM
+
+
+    provider = LogjuicerDiffsProvider(
+        args.zuul_url,
+        tenant,
+        pipelines,
+        config_args['output_json'],
+        auth_openidc=args.auth_openidc,
+    )
+    
+    provider.run()
+
+if __name__ == "__main__":
+    logjuicer_scraper()
